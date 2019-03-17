@@ -18,6 +18,7 @@ extra-source-files:  CHANGELOG.md
 
 library libtitanic
   exposed-modules:
+    DecisionTree
     NaiveBayes
     Parser
     Types

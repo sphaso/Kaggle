@@ -2,6 +2,7 @@
 
 module Main where
 
+import DecisionTree
 import NaiveBayes
 import Parser
 import Types
@@ -18,13 +19,6 @@ createSets ps = (take ntest speople, drop ntest speople)
         ntest = 712 -- 80% of the train dataset
         speople = shuffle' ps 891 genny
 
-bayes :: [Passenger] -> [Passenger] -> [(Maybe Int, Bool)]
-bayes test validation = zip (map survived validation) survival
-    where
-        positiveModel = mkBayesModel test True
-        negativeModel = mkBayesModel test False
-        survival = map (willSurvive positiveModel negativeModel) validation
-
 bayesOutput :: [Passenger] -> [Passenger] -> [(Int, Int)]
 bayesOutput train validation = map (\(a, b) -> (a, if b then 1 else 0)) survival
     where
@@ -32,9 +26,15 @@ bayesOutput train validation = map (\(a, b) -> (a, if b then 1 else 0)) survival
         negativeModel = mkBayesModel train False
         survival = map (\p -> (pid p, willSurvive positiveModel negativeModel p)) validation
 
+decisionTreeOutput :: [Passenger] -> [Passenger] -> [(Int, Int)]
+decisionTreeOutput train validation = zip (map pid validation) (map (survivalDecision model . passengerToNPassenger) validation)
+    where
+        model = mkDecisionTree $ (map passengerToNPassenger train)
+
 main :: IO ()
 main = do
-    train <- parse <$> BL.readFile "train.csv"
-    evaluate <- parse <$> BL.readFile "test.csv"
-    let res = BL.append "PassengerId,Survived\r\n" (toCsv $ bayesOutput train evaluate)
+    train <- (map cleanAgeData) <$> parse <$> BL.readFile "train.csv"
+    evaluate <- (map cleanAgeData) <$> parse <$> BL.readFile "test.csv"
+--    let res = BL.append "PassengerId,Survived\r\n" (toCsv $ bayesOutput train evaluate)
+    let res = BL.append "PassengerId,Survived\r\n" (toCsv $ decisionTreeOutput train evaluate)
     BL.writeFile "tx" res

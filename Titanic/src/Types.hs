@@ -90,7 +90,6 @@ familySizeGrab sib parch | sizef == 1 = "Single"
     where
         sizef = sib + parch + 1
 
-
 titleGrab :: String -> String
 titleGrab s = cleanTitle $ takeWhile (\c -> c /= '.') $ drop 2 $ dropWhile (\c -> c /= ',') s
 
