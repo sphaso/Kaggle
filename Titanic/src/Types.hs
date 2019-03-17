@@ -75,7 +75,7 @@ instance FromField Age where
 
 instance FromField Fare where
     parseField s = case runParser (parseField s) of
-        Left err -> pure $ Fare 8.05 -- mean value
+        Left err -> pure $ Fare 14.45 -- median value
         Right n -> pure $ Fare n
 
 instance FromField Embarked where

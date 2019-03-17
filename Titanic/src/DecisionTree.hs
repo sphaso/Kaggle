@@ -18,6 +18,7 @@ data NPassenger = NPassenger {
   , n_parch :: Int
   , n_familySize :: Int
   , n_embarked :: Int
+  , n_fare :: Int
 } deriving (Eq, Show)
 
 passengerToNPassenger :: Passenger -> NPassenger
@@ -31,6 +32,7 @@ passengerToNPassenger p = NPassenger {
   , n_parch = parch p
   , n_familySize = familySizeToInt $ familySize p
   , n_embarked = embarkedToInt $ embarked p
+  , n_fare = fareToInt $ fare p
 }
 
 survivedToInt :: Maybe Int -> Int
@@ -49,7 +51,12 @@ sexToInt "male" = 0
 sexToInt "female" = 1
 
 ageToInt :: Age -> Int
-ageToInt (Age n) = n
+ageToInt (Age n)
+  | n < 16 = 0
+  | n < 32 = 1
+  | n < 48 = 2
+  | n < 64 = 3
+  | otherwise = 4
 
 familySizeToInt :: String -> Int
 familySizeToInt "Single" = 0
@@ -60,6 +67,13 @@ embarkedToInt :: Embarked -> Int
 embarkedToInt (Embarked 'C') = 0
 embarkedToInt (Embarked 'S') = 1
 embarkedToInt (Embarked 'Q') = 2
+
+fareToInt :: Fare -> Int
+fareToInt (Fare d)
+  | d <= 7.91 = 0
+  | d <= 14.45 = 1
+  | d <= 31 = 2
+  | otherwise = 3
 
 entropy :: [Int] -> Double
 entropy xs = sum $ map (\x -> prob x * info x) (nub xs)
@@ -112,24 +126,31 @@ featureToF "n_sibsp" = n_sibsp
 featureToF "n_parch" = n_parch
 featureToF "n_family" = n_familySize
 featureToF "n_embarked" = n_embarked
+featureToF "n_fare" = n_fare
 
 features :: [String]
 features = [
              "n_pclass"
            , "n_title"
            , "n_sex"
-           , "n_age"
-           , "n_sibsp"
-           , "n_parch"
-           , "n_family"
+--         , "n_age"
+--         , "n_sibsp"
+--         , "n_parch"
+--         , "n_family"
            , "n_embarked"
+           , "n_fare"
            ]
 
 mkDecisionTree :: [NPassenger] -> DTree
 mkDecisionTree px = mkDecisionTree' 666 features px
 
 mkDecisionTree' :: Int -> [String] -> [NPassenger] -> DTree
-mkDecisionTree' v [] px = Leaf v 1
+mkDecisionTree' v [] px = Leaf v survivalPrediction
+    where
+        survivalRate = (fromIntegral $ length $ filter ((==1) . n_survived) px) / (fromIntegral $ length px)
+        survivalPrediction :: Int
+        survivalPrediction = if survivalRate > 0.5 then 1 else 0
+
 mkDecisionTree' v fx px
   | 0 == resultingEntropy = Leaf v $ head . snd $ M.elemAt 0 resultingClassesSet
   | otherwise = DTree {
@@ -150,7 +171,7 @@ survivalDecision :: DTree -> NPassenger -> Int
 survivalDecision (Leaf _ n) _ = n
 survivalDecision (DTree g _ c) p
     | [] == matching = survivalDecision (head c) p -- terrible, figure another way out
-	| otherwise = survivalDecision (head matching) p
+    | otherwise = survivalDecision (head matching) p
     where
         f = featureToF g
         pick (Leaf v _) = v == f p
