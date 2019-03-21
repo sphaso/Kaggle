@@ -128,21 +128,21 @@ featureToF "n_family" = n_familySize
 featureToF "n_embarked" = n_embarked
 featureToF "n_fare" = n_fare
 
-features :: [String]
-features = [
-             "n_pclass"
-           , "n_title"
-           , "n_sex"
---         , "n_age"
---         , "n_sibsp"
---         , "n_parch"
---         , "n_family"
-           , "n_embarked"
-           , "n_fare"
-           ]
+featuresDT :: [String]
+featuresDT = [
+               "n_pclass"
+             , "n_title"
+             , "n_sex"
+--           , "n_age"
+--           , "n_sibsp"
+--           , "n_parch"
+--           , "n_family"
+             , "n_embarked"
+             , "n_fare"
+             ]
 
-mkDecisionTree :: [NPassenger] -> DTree
-mkDecisionTree px = mkDecisionTree' 666 features px
+mkDecisionTree :: [String] -> [NPassenger] -> DTree
+mkDecisionTree feats px = mkDecisionTree' 666 feats px
 
 mkDecisionTree' :: Int -> [String] -> [NPassenger] -> DTree
 mkDecisionTree' v [] px = Leaf v survivalPrediction

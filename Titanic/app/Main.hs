@@ -2,6 +2,7 @@
 
 module Main where
 
+import RandomForest
 import DecisionTree
 import NaiveBayes
 import Parser
@@ -29,12 +30,18 @@ bayesOutput train validation = map (\(a, b) -> (a, if b then 1 else 0)) survival
 decisionTreeOutput :: [Passenger] -> [Passenger] -> [(Int, Int)]
 decisionTreeOutput train validation = zip (map pid validation) (map (survivalDecision model . passengerToNPassenger) validation)
     where
-        model = mkDecisionTree $ (map passengerToNPassenger train)
+        model = mkDecisionTree featuresDT $ map passengerToNPassenger train
+
+randomForestOutput :: [Passenger] -> [Passenger] -> [(Int, Int)]
+randomForestOutput train validation = zip (map pid validation) (map (survivalForest model . passengerToNPassenger) validation)
+    where
+        model = mkForest (map passengerToNPassenger train)
 
 main :: IO ()
 main = do
     train <- (map cleanAgeData) <$> parse <$> BL.readFile "train.csv"
     evaluate <- (map cleanAgeData) <$> parse <$> BL.readFile "test.csv"
 --    let res = BL.append "PassengerId,Survived\r\n" (toCsv $ bayesOutput train evaluate)
-    let res = BL.append "PassengerId,Survived\r\n" (toCsv $ decisionTreeOutput train evaluate)
+--    let res = BL.append "PassengerId,Survived\r\n" (toCsv $ decisionTreeOutput train evaluate)
+    let res = BL.append "PassengerId,Survived\r\n" (toCsv $ randomForestOutput train evaluate)
     BL.writeFile "tx" res

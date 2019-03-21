@@ -21,6 +21,7 @@ library libtitanic
     DecisionTree
     NaiveBayes
     Parser
+    RandomForest
     Types
     Utils
   -- other-modules:
