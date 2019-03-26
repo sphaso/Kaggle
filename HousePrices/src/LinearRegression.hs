@@ -1,38 +1,23 @@
+{-# LANGUAGE TupleSections #-}
+
 module LinearRegression where
 
 import Types
 import Utils
-
-data Line = Line {
-    b :: Double
-  , c :: Double
-} deriving (Eq, Show)
 
 data Model = Model {
     bi :: [Double]
   , b0 :: Double
 } deriving (Eq, Show)
 
-slope :: [House] -> (House -> Double) -> Double
-slope houses f = cov / var
+slope :: [Double] -> [Double] -> Double
+slope v1 v2 = cov / var
     where
-        cov = covariance houses f salePrice
-        var = variance houses f
+        cov = sum $ zipWith (*) v1 v2
+        var = sum $ map (^2) v2
 
-slope' :: [Double] -> [Double] -> Double
-slope' prices residuals = cov / var
-    where
-        cov = covariance' prices residuals
-        var = variance' residuals
-
-intercept :: [House] -> (House -> Double) -> Double
-intercept houses f = meanY - meanX * (slope houses f)
-    where
-        meanY = average $ map salePrice houses
-        meanX = average $ map f houses
-
-intercept' :: [House] -> [Double] -> Double
-intercept' houses coeffs = avgY - xs
+intercept :: [House] -> [Double] -> Double
+intercept houses coeffs = avgY - xs
     where
         avgX = map (\f -> average $ map f houses) predictors
         avgY = average $ map salePrice houses
@@ -49,36 +34,58 @@ predictors = [
              , woodDeckSF
              , price_per_neighborhood
              , exterCond
-             , pos_features_1
+--           , pos_features_1
              , bsmtExposure
              , kitchenQual
-             , house_function
+--           , house_function
              , pool_good
              , sale_cond
              , overallQual
-             , qual_ext
-             , qual_bsmt
+--           , qual_ext
+--           , qual_bsmt
             ]
 
-mkLine :: [House] -> [Line]
-mkLine houses = map (\f -> Line { b = slope houses f, c = intercept houses f }) predictors
-
-linePrediction :: Line -> (House -> Double) -> House -> Double
-linePrediction (Line b c) f h = b * (f h)
-
-coeff :: [House] -> [Line] -> [Double]
-coeff houses lines = map (slope' prices) residuals
+coeff :: [House] -> [Double]
+coeff houses = zipWith slope dDeltas mixGam
     where
-        residuals :: [[Double]]
-        residuals = map (\(f, l) -> map (\h -> salePrice h - linePrediction l f h) houses) llx
-        llx = zip predictors lines
-        prices = map salePrice houses
+        others i m = map snd $ filter ((/=i) . fst) m
+        -- covariance between Y and Xi
+        yAlphas :: [(House -> Double, Double)]
+        yAlphas = map (\p -> (p, slope (map salePrice houses) (map p houses))) predictors
+        ixYAlphas :: [(Int, (House -> Double, Double))]
+        ixYAlphas = zip [1..] yAlphas
+        -- residuals to Y
+        dDeltas :: [[Double]]
+        dDeltas = map (\(i, _) -> deltas houses (others i ixYAlphas)) ixYAlphas
+        mixGam :: [[Double]]
+        mixGam = gammas houses (mixalphas houses)
+
+deltas :: [House] -> [(House -> Double, Double)] -> [Double]
+deltas houses yalpha = zipWith (\y xx -> y + foldr (-) 0 xx) ys xs
+    where
+        ys :: [Double]
+        ys = map salePrice houses
+        xs :: [[Double]]
+        xs = map (\(f, a) -> map ((*a) . f) houses) yalpha
+
+mixalphas :: [House] -> [(House -> Double, [(House -> Double, Double)])]
+mixalphas houses = map (\(i, f) -> (f,) $ map (singleA f) (others i)) fx
+    where
+        fx = zip [1..] predictors
+        others i = map snd $ filter ((/=i) . fst) fx
+        v f = map f houses
+        singleA f g = (g, slope (v f) (v g))
+
+gammas :: [House] ->  [(House -> Double, [(House -> Double, Double)])] -> [[Double]]
+gammas houses mixA = map (\(f, as) -> gamming f as) mixA
+    where
+        compose h xs = map (\(f, d) -> d * f h) xs
+        gamming f as = map (\h -> (f h) + foldl (-) 0 (compose h as)) houses
 
 mkModel :: [House] -> Model
-mkModel houses = Model { bi = coeffs, b0 = intercept' houses coeffs }
+mkModel houses = Model { bi = coeffs, b0 = intercept houses coeffs }
     where
-        ll = mkLine houses
-        coeffs = coeff houses ll
+        coeffs = coeff houses
 
 useLinearModel :: Model -> House -> Double
 useLinearModel (Model bi b0) h = b0 + (sum $ zipWith (*) (map (\f -> f h) predictors) bi)

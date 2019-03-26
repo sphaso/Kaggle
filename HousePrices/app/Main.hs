@@ -37,7 +37,7 @@ main = do
 --  print $ (*3) $ standardDeviation' $ (map salePrice train)
 --  print $ outliers train
 --  print $ influencers training
+--  print $ test training
     print $ standardDeviation' $ test training
-    print $ mkLine training
     print $ mkModel training
 --  print $ meanPricePerNeigh training
