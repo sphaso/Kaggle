@@ -34,15 +34,15 @@ predictors = [
              , woodDeckSF
              , price_per_neighborhood
              , exterCond
---           , pos_features_1
+             , pos_features_1
              , bsmtExposure
              , kitchenQual
---           , house_function
+             , house_function
              , pool_good
              , sale_cond
              , overallQual
---           , qual_ext
---           , qual_bsmt
+             , qual_ext
+             , qual_bsmt
             ]
 
 coeff :: [House] -> [Double]
@@ -61,7 +61,7 @@ coeff houses = zipWith slope dDeltas mixGam
         mixGam = gammas houses (mixalphas houses)
 
 deltas :: [House] -> [(House -> Double, Double)] -> [Double]
-deltas houses yalpha = zipWith (\y xx -> y + foldr (-) 0 xx) ys xs
+deltas houses yalpha = zipWith (\y xx -> y - foldr (-) 0 xx) ys xs
     where
         ys :: [Double]
         ys = map salePrice houses
@@ -80,7 +80,7 @@ gammas :: [House] ->  [(House -> Double, [(House -> Double, Double)])] -> [[Doub
 gammas houses mixA = map (\(f, as) -> gamming f as) mixA
     where
         compose h xs = map (\(f, d) -> d * f h) xs
-        gamming f as = map (\h -> (f h) + foldl (-) 0 (compose h as)) houses
+        gamming f as = map (\h -> (f h) - foldr (-) 0 (compose h as)) houses
 
 mkModel :: [House] -> Model
 mkModel houses = Model { bi = coeffs, b0 = intercept houses coeffs }
