@@ -2,26 +2,12 @@
 
 module LinearRegression where
 
+import Numeric.LinearAlgebra
+import Numeric.LinearAlgebra.Data
+import Numeric.LinearAlgebra.HMatrix
+
 import Types
 import Utils
-
-data Model = Model {
-    bi :: [Double]
-  , b0 :: Double
-} deriving (Eq, Show)
-
-slope :: [Double] -> [Double] -> Double
-slope v1 v2 = cov / var
-    where
-        cov = sum $ zipWith (*) v1 v2
-        var = sum $ map (^2) v2
-
-intercept :: [House] -> [Double] -> Double
-intercept houses coeffs = avgY - xs
-    where
-        avgX = map (\f -> average $ map f houses) predictors
-        avgY = average $ map salePrice houses
-        xs = sum $ zipWith (*) avgX coeffs
 
 predictors :: [(House -> Double)]
 predictors = [
@@ -41,54 +27,22 @@ predictors = [
              , pool_good
              , sale_cond
              , overallQual
-             , qual_ext
-             , qual_bsmt
+--           , qual_ext
+--           , qual_bsmt
             ]
 
-coeff :: [House] -> [Double]
-coeff houses = zipWith slope dDeltas mixGam
+mkModel :: [House] -> [Double]
+mkModel houses = concat $ toLists $ (inv (tr m `mul` m)) `mul` (tr m) `mul` v
     where
-        others i m = map snd $ filter ((/=i) . fst) m
-        -- covariance between Y and Xi
-        yAlphas :: [(House -> Double, Double)]
-        yAlphas = map (\p -> (p, slope (map salePrice houses) (map p houses))) predictors
-        ixYAlphas :: [(Int, (House -> Double, Double))]
-        ixYAlphas = zip [1..] yAlphas
-        -- residuals to Y
-        dDeltas :: [[Double]]
-        dDeltas = map (\(i, _) -> deltas houses (others i ixYAlphas)) ixYAlphas
-        mixGam :: [[Double]]
-        mixGam = gammas houses (mixalphas houses)
-
-deltas :: [House] -> [(House -> Double, Double)] -> [Double]
-deltas houses yalpha = zipWith (\y xx -> y - foldr (-) 0 xx) ys xs
-    where
-        ys :: [Double]
+        xs = map (\h -> map (\f -> f h) predictors) houses
+        w = length predictors
+        l = length xs
+        m = (><) l w (concat xs)
         ys = map salePrice houses
-        xs :: [[Double]]
-        xs = map (\(f, a) -> map ((*a) . f) houses) yalpha
+        v = (><) l 1 ys
 
-mixalphas :: [House] -> [(House -> Double, [(House -> Double, Double)])]
-mixalphas houses = map (\(i, f) -> (f,) $ map (singleA f) (others i)) fx
-    where
-        fx = zip [1..] predictors
-        others i = map snd $ filter ((/=i) . fst) fx
-        v f = map f houses
-        singleA f g = (g, slope (v f) (v g))
-
-gammas :: [House] ->  [(House -> Double, [(House -> Double, Double)])] -> [[Double]]
-gammas houses mixA = map (\(f, as) -> gamming f as) mixA
-    where
-        compose h xs = map (\(f, d) -> d * f h) xs
-        gamming f as = map (\h -> (f h) - foldr (-) 0 (compose h as)) houses
-
-mkModel :: [House] -> Model
-mkModel houses = Model { bi = coeffs, b0 = intercept houses coeffs }
-    where
-        coeffs = coeff houses
-
-useLinearModel :: Model -> House -> Double
-useLinearModel (Model bi b0) h = b0 + (sum $ zipWith (*) (map (\f -> f h) predictors) bi)
+useLinearModel :: [Double] -> House -> Double
+useLinearModel dd h = sum $ zipWith (*) (map (\f -> f h) predictors) dd
 
 -- EXTRA FEATURES
 

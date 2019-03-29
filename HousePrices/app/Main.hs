@@ -16,12 +16,12 @@ linearPrediction :: [House] -> [Double]
 linearPrediction houses = map (useLinearModel model) houses
     where
         model = mkModel houses
---
---linearOutput :: [House] -> [House] -> [(Int, Double)]
---linearOutput training validation = zip (map Types.id validation) predictions
---    where
---        model = mkModel training
---        predictions = map (pricePrediction model) validation
+
+linearOutput :: [House] -> [House] -> [(Int, Double)]
+linearOutput training validation = zip (map Types.id validation) predictions
+    where
+        model = mkModel training
+        predictions = map (useLinearModel model) validation
 
 test :: [House] -> [Double]
 test houses = sort $ zipWith (\h p -> salePrice h - p) houses predictions
@@ -31,13 +31,12 @@ test houses = sort $ zipWith (\h p -> salePrice h - p) houses predictions
 main :: IO ()
 main = do
     training <- parseFullHouse <$> BL.readFile "train.csv"
---  validation <- parseValidationHouse <$> BL.readFile "test.csv"
---  let res = BL.append "Id,SalePrice\r\n" (toCsv $ linearOutput training validation)
---  BL.writeFile "tx" res
+    validation <- parseValidationHouse <$> BL.readFile "test.csv"
+    let res = BL.append "Id,SalePrice\r\n" (toCsv $ linearOutput training validation)
+    BL.writeFile "tx" res
 --  print $ (*3) $ standardDeviation' $ (map salePrice train)
 --  print $ outliers train
 --  print $ influencers training
 --  print $ test training
-    print $ standardDeviation' $ test training
-    print $ mkModel training
+--  print $ standardDeviation' $ test training
 --  print $ meanPricePerNeigh training
